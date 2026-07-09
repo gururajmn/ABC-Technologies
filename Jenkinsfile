@@ -1,14 +1,14 @@
 pipeline {
-
     agent any
 
     tools {
-        maven 'Maven3'
         jdk 'JDK17'
+        maven 'Maven3'
     }
 
     environment {
         IMAGE_NAME = "abc-technologies"
+        CONTAINER_NAME = "abc-technologies"
     }
 
     stages {
@@ -45,27 +45,37 @@ pipeline {
 
         stage('Package') {
             steps {
-                sh 'mvn package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t abc-technologies .'
+                sh 'docker build -t ${IMAGE_NAME}:latest .'
             }
         }
 
-        stage('Docker Run') {
+        stage('Deploy Container') {
             steps {
                 sh '''
-                docker rm -f abc-technologies || true
+                docker stop ${CONTAINER_NAME} || true
+                docker rm ${CONTAINER_NAME} || true
+
                 docker run -d \
-                --name abc-technologies \
-                -p 8082:8080 \
-                abc-technologies
+                  --name ${CONTAINER_NAME} \
+                  -p 8082:8080 \
+                  ${IMAGE_NAME}:latest
                 '''
             }
         }
+    }
 
+    post {
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
     }
 }
